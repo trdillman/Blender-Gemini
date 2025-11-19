@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# ==============================================================================
+# LLM DEVELOPER CHEATSHEET
+# ==============================================================================
+# A collection of useful commands and snippets for interacting with this repo.
+
+# ------------------------------------------------------------------------------
+# 1. CURL COMMANDS (Testing the Blender Bridge)
+# ------------------------------------------------------------------------------
+
+# Health Check
+# curl -v http://127.0.0.1:8081/
+
+# Get History
+# curl http://127.0.0.1:8081/history
+
+# Execute Python Code (JSON Payload)
+# curl -X POST http://127.0.0.1:8081/execute \
+#      -H "Content-Type: application/json" \
+#      -d '{"code": "import bpy; bpy.ops.mesh.primitive_monkey_add()"}'
+
+# Inspect Graph
+# curl http://127.0.0.1:8081/inspect
+
+# Get Screenshot (Returns JSON with base64)
+# curl http://127.0.0.1:8081/screenshot
+
+# ------------------------------------------------------------------------------
+# 2. FILE MANIPULATION (For LLMs)
+# ------------------------------------------------------------------------------
+
+# Concatenate all critical source files for context window (excluding large assets)
+# cat App.tsx types.ts hooks/*.ts gemini_bridge.py.txt > context_dump.txt
+
+# ------------------------------------------------------------------------------
+# 3. BLENDER PYTHON SNIPPETS
+# ------------------------------------------------------------------------------
+
+# Clear all nodes in active modifier
+# """
+# obj = bpy.context.active_object
+# mod = obj.modifiers['GeometryNodes']
+# mod.node_group.nodes.clear()
+# """
+
+# Add a node by type
+# """
+# node = tree.nodes.new(type='GeometryNodeMeshToPoints')
+# node.location = (200, 0)
+# """
+
+# Link nodes
+# """
+# tree.links.new(node_a.outputs[0], node_b.inputs[0])
+# """
+
+echo "This file is for reference only. Open it in a text editor."

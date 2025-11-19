@@ -1,0 +1,104 @@
+import bpy
+import unittest
+import sys
+import json
+import io
+
+# ==============================================================================
+# BLENDER BRIDGE TEST RUNNER
+# ==============================================================================
+# INSTRUCTIONS:
+# 1. Ensure 'gemini_bridge.py' is already loaded and registered in Blender.
+#    (Or paste the BridgeCore class definition here if testing in isolation)
+# 2. Paste this script into a new Text Block in Blender.
+# 3. Run Script.
+# ==============================================================================
+
+# Mocking the BridgeCore if not available in namespace, 
+# In a real scenario, we might import from the addon module.
+# For this test suite, we define a minimal mock of what we expect the bridge to do
+# to validate the concept, or we assume the user has defined the classes.
+
+def find_bridge_classes():
+    # Attempt to find the classes in the global scope or module
+    # This is a heuristic for the dev environment
+    return True
+
+class TestGeminiBridge(unittest.TestCase):
+
+    def setUp(self):
+        # Create a clean scene
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        
+    def test_execute_python_simple(self):
+        """Test if we can run basic python code via exec() pattern"""
+        code = "print('Hello World')"
+        
+        # Simulate stdout capture pattern used in bridge
+        old_stdout = sys.stdout
+        sys.stdout = capture = io.StringIO()
+        
+        try:
+            exec(code)
+            result = capture.getvalue().strip()
+            self.assertEqual(result, "Hello World")
+        finally:
+            sys.stdout = old_stdout
+
+    def test_execute_python_blender_ops(self):
+        """Test if we can create an object"""
+        code = "import bpy\nbpy.ops.mesh.primitive_cube_add()"
+        exec(code)
+        self.assertTrue("Cube" in bpy.data.objects)
+
+    def test_serialization_structure(self):
+        """Test if we can inspect a node tree (Mock simulation)"""
+        # Create object with nodes
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+        mod = obj.modifiers.new(name="Geo", type='NODES')
+        node_group = mod.node_group
+        
+        # Add a node
+        input_node = node_group.nodes.get("Group Input")
+        output_node = node_group.nodes.get("Group Output")
+        
+        # Simple check
+        self.assertIsNotNone(input_node)
+        self.assertIsNotNone(output_node)
+        
+        # Simulate the GraphSerializer logic (Simplified)
+        nodes_data = []
+        for node in node_group.nodes:
+            nodes_data.append({
+                "name": node.name,
+                "type": node.bl_idname,
+                "location": (node.location.x, node.location.y)
+            })
+            
+        self.assertTrue(len(nodes_data) >= 2)
+        print(f"\nSerialized {len(nodes_data)} nodes successfully.")
+
+    def test_json_encoder(self):
+        """Test custom JSON encoding for Blender types"""
+        import mathutils
+        vec = mathutils.Vector((1.0, 2.0, 3.0))
+        
+        class BlenderEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if hasattr(obj, "to_tuple"): return obj.to_tuple()
+                return super().default(obj)
+                
+        json_str = json.dumps({"vec": vec}, cls=BlenderEncoder)
+        self.assertIn("[1.0, 2.0, 3.0]", json_str)
+
+if __name__ == '__main__':
+    # Load the test suite
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestGeminiBridge)
+    
+    # Run tests
+    print("\n" + "="*40)
+    print("RUNNING GEMINI BRIDGE SANITY CHECKS")
+    print("="*40)
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(suite)

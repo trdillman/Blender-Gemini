@@ -1,0 +1,6 @@
+
+{
+  "name": "Blender Gemini Assistant Pro",
+  "description": "v2.1 - Production-ready AI assistant for Blender 4.5+ that leverages Gemini 3 Pro. Features persistent history, user-data storage, and robust error healing.",
+  "requestFramePermissions": []
+}

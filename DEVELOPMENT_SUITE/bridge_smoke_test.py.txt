@@ -1,0 +1,30 @@
+import os
+import runpy
+import bpy
+
+# Simple smoke test to ensure gemini_bridge.py.txt can be
+# loaded, registered, and unregistered in a headless session.
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+BRIDGE_PATH = os.path.join(ROOT_DIR, "gemini_bridge.py.txt")
+
+if not os.path.exists(BRIDGE_PATH):
+    raise RuntimeError(f"gemini_bridge.py.txt not found at {BRIDGE_PATH}")
+
+ns = runpy.run_path(BRIDGE_PATH, run_name="gemini_bridge")
+
+if "register" not in ns or "unregister" not in ns:
+    raise RuntimeError("Bridge module did not define register()/unregister()")
+
+ns["register"]()
+print("[Gemini Smoke] register() OK")
+
+# Basic check: ensure classes are registered
+assert any(c.__name__.startswith("GEMINI_") for c in bpy.types.Operator.__subclasses__()), \
+    "Expected at least one GEMINI_* operator to be registered."
+
+ns["unregister"]()
+print("[Gemini Smoke] unregister() OK")
+
+print("[Gemini Smoke] Bridge smoke test finished successfully.")
+

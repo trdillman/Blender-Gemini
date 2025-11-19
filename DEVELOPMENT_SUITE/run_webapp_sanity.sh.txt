@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# ==============================================================================
+# WEBAPP SANITY CHECK
+# ==============================================================================
+# Usage: bash run_webapp_sanity.sh.txt
+
+echo "🔍 Starting Sanity Check for Blender Gemini Assistant..."
+
+# 1. Check Node Version
+echo -n "Checking Node version... "
+if command -v node >/dev/null 2>&1; then
+    echo "OK ($(node -v))"
+else
+    echo "FAIL (Node not installed)"
+    exit 1
+fi
+
+# 2. Check package.json
+echo -n "Checking package.json... "
+if [ -f "package.json" ]; then
+    echo "OK"
+else
+    echo "FAIL (Missing package.json)"
+    exit 1
+fi
+
+# 3. Check Types
+echo "Running TypeScript validation..."
+if [ -f "node_modules/.bin/tsc" ]; then
+    ./node_modules/.bin/tsc --noEmit --skipLibCheck
+    if [ $? -eq 0 ]; then
+        echo "✅ TypeScript check PASSED."
+    else
+        echo "❌ TypeScript check FAILED."
+        exit 1
+    fi
+else
+    echo "⚠️  TSC not found. Skipping type check. (Run npm install)"
+fi
+
+echo "========================================"
+echo "🎉 Sanity Check Complete. Ready to Code."
+echo "========================================"
