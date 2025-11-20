@@ -57,9 +57,17 @@ class TestGeminiBridge(unittest.TestCase):
         bpy.ops.mesh.primitive_cube_add()
         obj = bpy.context.active_object
         mod = obj.modifiers.new(name="Geo", type='NODES')
+        # Assign a new node group to the modifier
+        new_node_group = bpy.data.node_groups.new(name="TestNodeGroup", type='GeometryNodeTree')
+        mod.node_group = new_node_group
         node_group = mod.node_group
         
-        # Add a node
+        # Ensure Group Input and Group Output nodes are present
+        if not node_group.nodes.get("Group Input"):
+            node_group.nodes.new('NodeGroupInput')
+        if not node_group.nodes.get("Group Output"):
+            node_group.nodes.new('NodeGroupOutput')
+            
         input_node = node_group.nodes.get("Group Input")
         output_node = node_group.nodes.get("Group Output")
         

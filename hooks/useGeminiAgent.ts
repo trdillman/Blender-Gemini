@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Settings, CustomTool, Message, ExecutionResult, ScreenshotResult, GraphData } from '../types';
@@ -92,7 +91,7 @@ export const useGeminiAgent = ({
 
     const formattedHistory = historyMessages.map(m => ({
       role: m.role === 'user' ? 'user' : 'model',
-      parts: [{ text: m.text }]
+      parts: [{ text: m.text || "" }]
     }));
 
     // 3. Config
@@ -178,7 +177,21 @@ export const useGeminiAgent = ({
           if (signal.aborted) return;
 
           if (chunk.text) fullText += chunk.text;
-          if (chunk.functionCalls) toolCalls.push(...chunk.functionCalls);
+          
+          // EXTRACT RAW FUNCTION CALLS
+          // We must extract from parts directly to preserve 'thought_signature' for Thinking models.
+          // The SDK's chunk.functionCalls helper might return sanitized objects.
+          const parts = chunk.candidates?.[0]?.content?.parts;
+          if (parts) {
+              for (const part of parts) {
+                  if (part.functionCall) {
+                      toolCalls.push(part.functionCall);
+                  }
+              }
+          } else if (chunk.functionCalls) {
+             // Fallback
+             toolCalls.push(...chunk.functionCalls);
+          }
           
           if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks) {
               chunk.candidates[0].groundingMetadata.groundingChunks.forEach((c: any) => {
@@ -191,7 +204,7 @@ export const useGeminiAgent = ({
               index === self.findIndex((t) => t.uri === link.uri)
           );
           
-          updateLastMessage({ 
+          updateLastMessage({
               text: fullText, 
               groundingLinks: uniqueLinks,
               isStreaming: true 
@@ -221,7 +234,7 @@ export const useGeminiAgent = ({
               if (response.attachment) attachmentUpdate = response.attachment;
           }
 
-          updateLastMessage({ 
+          updateLastMessage({
               text: fullText, 
               isStreaming: true,
               ...(attachmentUpdate ? { attachment: attachmentUpdate } : {})
@@ -229,10 +242,17 @@ export const useGeminiAgent = ({
 
           // Recursion
           if (functionResponses.length > 0 && !signal.aborted) {
+              // CRITICAL FIX: Include fullText (thoughts) in history to prevent 'missing thought_signature' error
+              const modelParts: any[] = [];
+              if (fullText) {
+                  modelParts.push({ text: fullText });
+              }
+              toolCalls.forEach(tc => modelParts.push({ functionCall: tc }));
+
               const nextHistory = [
                   ...history, 
                   { role: 'user', parts: currentParts },
-                  { role: 'model', parts: toolCalls.map(tc => ({ functionCall: tc })) }
+                  { role: 'model', parts: modelParts }
               ];
               
               await runAgentLoop(ai, model, config, nextHistory, functionResponses, signal, retryCount + 1);
@@ -304,8 +324,16 @@ async function handleToolCall(
                         : `Failed. Stderr: ${res.stderr}`;
                     const icon = res.success ? '✅' : '❌';
                     logText = `*${icon} Executed ${args.trigger}*\n` + 
-                              (res.stdout ? `\`\`\`\n${res.stdout.trim()}\n\`\`\`` : '') + 
-                              (res.stderr ? `\nStderr:\n\`\`\`\n${res.stderr.trim()}\n\`\`\`` : '');
+                              (res.stdout ? `\
+\
+${res.stdout.trim()}\n\
+\
+` : '') + 
+                              (res.stderr ? `\nStderr:\n\
+\
+${res.stderr.trim()}\n\
+\
+` : '');
                 } else {
                     resultStr = `Tool '${args.trigger}' not found.`;
                 }
@@ -336,8 +364,16 @@ async function handleToolCall(
                     : `Failed. Stderr: ${res.stderr}`;
                 const icon = res.success ? '✅' : '❌';
                 logText = `*${icon} Executed Code*\n` + 
-                          (res.stdout ? `\`\`\`\n${res.stdout.trim()}\n\`\`\`` : '') + 
-                          (res.stderr ? `\nStderr:\n\`\`\`\n${res.stderr.trim()}\n\`\`\`` : '');
+                          (res.stdout ? `\
+\
+${res.stdout.trim()}\n\
+\
+` : '') + 
+                          (res.stderr ? `\nStderr:\n\
+\
+${res.stderr.trim()}\n\
+\
+` : '');
                 break;
             }
             case 'search_knowledge_base': {

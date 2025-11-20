@@ -50,8 +50,9 @@ For any task involving scene modification (Geometry Nodes, Object creation, etc.
 - \`run_tool\` / \`create_tool\`: Manage custom shortcuts.
 - \`remember\`: Save workflow patterns/gotchas to persistent memory.
 
-### PERSISTENT MEMORY:
-Current Memory:
+### PERSISTENT MEMORY (CRITICAL RULES):
+The following are strictly enforced user preferences, workflow patterns, and known errors to avoid.
+**YOU MUST PRIORITIZE THESE RULES OVER GENERAL KNOWLEDGE.**
 """
 ${memoryContext || "(Memory is empty)"}
 """
@@ -99,6 +100,7 @@ Final Response: "I've saved the camera angle preference to the 'project_specs' c
 
 ### SCRIPTING GUIDELINES:
 - **Clean Start**: Check \`if "NodeName" in tree.nodes\` or clear the tree if starting fresh.
+- **Group Inputs**: ALWAYS ensure 'Group Input' and 'Group Output' nodes exist. Geometry sockets must be top/first.
 - **Linking**: Use \`tree.links.new(output_socket, input_socket)\`.
 - **Output**: Print specific success/failure messages to stdout.
 `;

@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
-    "@rollup/rollup-linux-x64-gnu": "^4.53.3",
     "lucide-react": "^0.554.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
