@@ -1,11 +1,10 @@
-
 bl_info = {
     "name": "Gemini Bridge",
     "author": "Gemini Assistant",
-    "version": (2, 1, 1),
+    "version": (2, 1, 2),
     "blender": (4, 5, 0),
     "location": "View3D > Sidebar > Gemini",
-    "description": "Robust bridge for Gemini Web Assistant (v2.1.1)",
+    "description": "Robust bridge for Gemini Web Assistant (v2.1.2)",
     "category": "Development",
 }
 
@@ -359,7 +358,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         if not self._authorized():
             return
         if self.path == '/':
-            self._send(200, "Gemini Bridge Online V2.1.1", False)
+            self._send(200, "Gemini Bridge Online V2.1.2", False)
         elif self.path == '/history':
             data = self._queue_task(lambda: BridgeCore.read_file(HISTORY_FILE, "[]"))
             self._send(200, data, is_json=True)
@@ -552,7 +551,7 @@ class GEMINI_PT_panel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         prefs = get_prefs(context)
-        global HTTPD
+        global HTTPD, SERVER_STATUS_MESSAGE
 
         status_box = layout.box()
         if HTTPD:
@@ -564,6 +563,14 @@ class GEMINI_PT_panel(bpy.types.Panel):
             row = status_box.row()
             row.label(text="Status: Offline", icon='CHECKBOX_DEHLT')
             row.operator("gemini.control_server", text="Start", icon='PLAY').action = 'START'
+        
+        if SERVER_STATUS_MESSAGE:
+             row = status_box.row()
+             if "Error" in SERVER_STATUS_MESSAGE:
+                 row.alert = True
+                 row.label(text=SERVER_STATUS_MESSAGE, icon='ERROR')
+             else:
+                 row.label(text=SERVER_STATUS_MESSAGE, icon='INFO')
 
         layout.operator("gemini.launch_assistant", text="Launch Interface", icon='URL')
 
@@ -579,6 +586,7 @@ class GEMINI_PT_panel(bpy.types.Panel):
 
 SERVER_THREAD = None
 HTTPD = None
+SERVER_STATUS_MESSAGE = ""
 
 
 class ReusableTCPServer(socketserver.ThreadingTCPServer):
@@ -596,9 +604,10 @@ def process_queue():
 
 
 def start_server():
-    global HTTPD, SERVER_THREAD
+    global HTTPD, SERVER_THREAD, SERVER_STATUS_MESSAGE
     if HTTPD:
         print("[Gemini] Server already running.")
+        SERVER_STATUS_MESSAGE = f"Online: Port {PORT}"
         return
     try:
         HTTPD = ReusableTCPServer(('127.0.0.1', PORT), RequestHandler)
@@ -607,19 +616,23 @@ def start_server():
         SERVER_THREAD.daemon = True
         SERVER_THREAD.start()
         print(f"[Gemini] Server started on port {PORT}")
+        print(f"[Gemini] Token: {SERVER_TOKEN}")
+        SERVER_STATUS_MESSAGE = f"Online: Port {PORT}"
 
         if not bpy.app.timers.is_registered(process_queue):
             bpy.app.timers.register(process_queue)
 
     except OSError as e:
         print(f"[Gemini] Port {PORT} in use. Please stop other instances.")
+        SERVER_STATUS_MESSAGE = f"Error: Port {PORT} busy. Restart Blender."
         HTTPD = None
     except Exception as e:
         print(f"[Gemini] Failed to start server: {e}")
+        SERVER_STATUS_MESSAGE = f"Error: {str(e)}"
 
 
 def stop_server():
-    global HTTPD, SERVER_THREAD
+    global HTTPD, SERVER_THREAD, SERVER_STATUS_MESSAGE
     if HTTPD:
         try:
             HTTPD.shutdown()
@@ -629,6 +642,7 @@ def stop_server():
         HTTPD = None
         SERVER_THREAD = None
         print("[Gemini] Server stopped")
+        SERVER_STATUS_MESSAGE = "Server Stopped"
 
     if bpy.app.timers.is_registered(process_queue):
         bpy.app.timers.unregister(process_queue)
